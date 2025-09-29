@@ -1,0 +1,166 @@
+kubectl get ns
+
+kubectl create ns nginx
+
+kubectl get pods -n nginx
+
+kubectl run nginx --image=nginx => for creating pod name as 'nginx'
+
+kubectl delete pod nginx => to delete pod name as 'nginx'
+
+kubectl run nginx -n nginx => pod of nginx name run inside nginx namespace
+
+kubectl delete pod nginx -n nginx => to delete pod inside namespace
+
+kubectl delete ns nginx => to delete namespace
+
+vi namespace.yml
+{
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: nginx
+}
+
+by keyword 'create' it can create only but by keyword 'apply' if not present then created and if present then edited
+kubectl apply -f namespace.yml
+
+
+vi pod.yml
+{
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-pod
+  namespace: nginx
+spec:
+  containers:
+    - name: nginx
+	  image: nginx:latest
+	  ports:
+	  - containerPort: 80
+}
+kubectl apply -f pod.yml
+
+
+kubectl exec -it pod/nginx-pod -n nginx -- bash => This command is used to enter  inside a container which is running inside pod and that pod run inside namespace
+
+
+vi job.yml
+{
+kind: Job
+apiVersion: batch/v1
+metadata:
+  name: demo-job
+  namespace: nginx
+spec:
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+	 name: demo-job-pod
+	 labels:
+	   app: batch-task
+	spec:
+	  containers:
+	  - name: batch-container
+	    image:  busybox
+		command: ["sh", "-c", "echo Hello Dosto! && sleep 10"]
+	  restartPolicy: Never
+}
+kubectl apply job.yml
+kubectl get job -n nginx
+kubectl get pods -n nginx
+kubectl logs pod/demo-job-qqrkh -n nginx
+
+
+
+
+vi cronjob.yml
+{
+kind: CronJob
+apiVersion: batch/v1
+metadata:
+  name: minute-backup
+  namespace: nginx
+spec:
+  schedule: "* * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          name: minute-backup
+          labels:
+            app: minute-backup
+        spec:
+          containers:
+            - name: batch-container
+              image: busybox
+              command:
+                - sh
+                - -c
+                - >
+                  echo "Backup Started" &&
+                  mkdir -p /backups &&
+                  mkdir -p /demo-data &&
+                  cp -r /demo-data /backups &&
+                  echo "Backup Completed"
+              volumeMounts:
+                - name: data-volume
+                  mountPath: /demo-data
+                - name: backup-volume
+                  mountPath: /backups
+          restartPolicy: OnFailure
+      volumes:
+        - name: data-volume
+          hostPath:
+            path: /demo-data
+            type: DirectoryOrCreate
+        - name: backup-volume
+          hostPath:
+            path: /backups
+            type: DirectoryOrCreate
+}
+
+vi PersistentVolume.yml
+{
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: local-pv
+  labels:
+    app: local
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath: 
+    path: /mnt/data
+}
+kubectl apply -f PersistentVolume.yml
+kubectl get pv
+
+
+vi PersistentVolumeClaim.yml
+{
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: local-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+	  storage: 1Gi
+  storageClassName: local-storage
+}
+kubectl apply -f PersistentVolumeClaim.yml
+kubectl get pvc
+
+
+
+
