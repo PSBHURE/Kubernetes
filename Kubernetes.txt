@@ -16,7 +16,7 @@ kubectl run nginx --image=nginx => for creating pod name as 'nginx'
 
 kubectl delete pod nginx => to delete pod name as 'nginx'
 
-kubectl run nginx -n nginx => pod of nginx name run inside nginx namespace
+kubectl run nginx --image=nginx:latest -n nginx => pod of nginx name run inside nginx namespace
 
 kubectl delete pod nginx -n nginx => to delete pod inside namespace
 
