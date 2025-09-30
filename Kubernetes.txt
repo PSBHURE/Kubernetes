@@ -1,3 +1,122 @@
+kind create cluster --name=tes-cluster --config=config.yml
+
+kubectl cluster-info --context kind-tws-cluster
+
+kubectl get nodes --context kind-tws-cluster
+
+kubectl config use-contest kind-tws-cluster
+
+kubectl get ns
+
+kubectl create ns nginx
+
+kubectl get pods -n nginx
+
+kubectl run nginx --image=nginx => for creating pod name as 'nginx'
+
+kubectl delete pod nginx => to delete pod name as 'nginx'
+
+kubectl run nginx -n nginx => pod of nginx name run inside nginx namespace
+
+kubectl delete pod nginx -n nginx => to delete pod inside namespace
+
+kubectl delete ns nginx => to delete namespace
+
+vi namespace.yml
+{
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: nginx
+}
+
+by keyword 'create' it can create only but by keyword 'apply' if not present then created and if present then edited
+kubectl apply -f namespace.yml
+
+
+vi pod.yml
+{
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-pod
+  namespace: nginx
+spec:
+  containers:
+    - name: nginx
+	  image: nginx:latest
+	  ports:
+	  - containerPort: 80
+}
+kubectl apply -f pod.yml
+
+
+kubectl exec -it pod/nginx-pod -n nginx -- bash => This command is used to enter  inside a container which is running inside pod and that pod run inside namespace
+
+kubectl describe pod/nginx-pod -n nginx
+
+
+vi deployement.yml
+{
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: nginx-deployment
+  namespace: nginx
+spec: 
+  replicas: 2
+  selector:
+    matchLabels:
+	  app: nginx
+	  
+  template:
+    metadata:
+	  name: nginx-dep-pod
+	  labels:
+	    app: nginx
+	
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+	    - containerPort: 80
+}
+kubectl apply -f deployement.yml
+
+kubectl scale deployment/nginx-deployment -n nginx --replicas=5
+
+kubectl set image deployement/nginx-deployment -n nginx nginx=nginx:1.27.3
+
+
+vi replicaset.yml
+{
+kind: ReplicaSet
+apiVersion: apps/v1
+metadata:
+  name: nginx-replicasets
+  namespace: nginx
+spec: 
+  replicas: 2
+  selector:
+    matchLabels:
+	  app: nginx
+	  
+  template:
+    metadata:
+	  name: nginx-rep-pod
+	  labels:
+	    app: nginx
+	
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+	    - containerPort: 80
+}
+kubectl apply -f replicaset.yml
+
 kubectl get ns
 
 kubectl create ns nginx
