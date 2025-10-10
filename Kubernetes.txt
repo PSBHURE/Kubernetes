@@ -344,3 +344,153 @@ kubectl get svc -n nginx
 kubectl getall -n nginx
 
 sudo -E kubectl port-forward service/nginx-service -n nginx 81:80 --address=0.0.0.0
+sudo -E kubectl port-forward service/notes-app-service -n notes-app 8000:8000 --address=0.0.0.0
+
+++++++++++++++++++++++++++++++for MYSQL start++++++++++++++++++++++++++++++++++++++
+ubuntu@Kubernetes:~/mysql$ cat namespace.yml
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: mysql
+
+
+ubuntu@Kubernetes:~/mysql$ cat configMap.yml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: mysql-config-map
+  namespace: mysql
+data:
+  MYSQL_DATABASE: devops
+
+
+
+ubuntu@Kubernetes:~/mysql$ cat secrate.yml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: mysql-secret
+  namespace: mysql
+data:
+  MYSQL_ROOT_PASSWORD: cm9vdAo=  #base64 encoded for "root"
+
+
+ubuntu@Kubernetes:~/mysql$ cat statefulset.yml
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: mysql-statefulset
+  namespace: mysql
+spec:
+  serviceName: mysql-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: MYSQL_ROOT_PASSWORD
+
+        - name: MYSQL_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: mysql-config-map
+              key: MYSQL_DATABASE
+        volumeMounts:
+        - name: mysql-data
+          mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
+
+
+
+ubuntu@Kubernetes:~/mysql$ cat service.yml
+kind: Service
+apiVersion: v1
+metadata:
+  name: mysql-service
+  namespace: mysql
+spec:
+  clusterIP: None
+  selector:
+    app: mysql
+  ports:
+  - name: mysql
+    protocol: TCP
+    port: 3306
+    targetPort: 3306
+
+
+
+
+
+++++++++++++++++++++++++++++++for MYSQL end++++++++++++++++++++++++++++++++++++++
+
+
+
+kubectl taint node tws-cluster-worker2 prod=true:NoSchedule => mean on this node now pods can not created
+
+kubectl taint node tws-cluster-worker2 pod=true:NoSchedule- => mean on this node now pods can created i.e. "taint" is removed.
+
+
+vi pod.yml
+{
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-pod
+  namespace: nginx
+spec:
+  containers:
+    - name: nginx
+	  image: nginx:latest
+	  ports:
+	  - containerPort: 80
+	tolerations:					=> because of this even this node is "taint" it will allow to run pod on that node
+	  - key: "prod"
+	    operator: "Equal"
+		value: "true"
+		effect: "NoSchedule"
+}
+kubectl apply -f pod.yml
+
+
+RUN FOLLOWING COMMAND TO INSATLL MATRIX-SERVER IN OUR KIND Cluster
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+kubectl -n kube-system edit deployment metrics-server 
+
+add the security bypass to deployment under container.args
+- --kubelet-insecure-tls
+- --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
+
+RESTART TJE METRICS-SERVER
+kubectl -n kube-system rollout restart deployment metrics-server
+
+kubectl top node => show the usage of  nodes
+
+kubectl top pod -n nginx => to check how much resources used by pods of perticular namespace 
+
+
+
+
+
